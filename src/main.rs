@@ -8,7 +8,10 @@ use cortex_m_rt::{entry, exception};
 use stm32f0xx_hal::{pac, prelude::*};
 
 use stm32f051_rust::time_source::TimeSource;
-use stm32f051_rust::timer::TimerGroup;
+use stm32f051_rust::timer::{Timer, TimerGroup};
+
+use stm32f0xx_hal::gpio::gpioc::PC13;
+use stm32f0xx_hal::gpio::{Output, PushPull};
 
 use core::cell::RefCell;
 
@@ -28,6 +31,31 @@ impl TimeSource for SysTickTimeSource {
     }
 }
 
+struct App<'a> {
+    timer_group: &'a TimerGroup<'a>,
+    timer: Timer<'a>,
+    led: RefCell<PC13<Output<PushPull>>>,
+}
+
+impl<'a> App<'a> {
+    fn new(timer_group: &'a TimerGroup<'a>, led: PC13<Output<PushPull>>) -> Self {
+        Self {
+            timer_group,
+            timer: TimerGroup::new_timer(),
+            led: RefCell::new(led),
+        }
+    }
+
+    fn start(&'a self) {
+        self.arm_timer();
+    }
+
+    fn arm_timer(&'a self) {
+        self.led.borrow_mut().toggle().ok();
+        self.timer_group.start(&self.timer, 500, self, |app| app.arm_timer());
+    }
+}
+
 #[entry]
 fn main() -> ! {
     let time_source = SysTickTimeSource::new();
@@ -39,20 +67,16 @@ fn main() -> ! {
     let gpioc = p.GPIOC.split(&mut rcc);
     let led = cortex_m::interrupt::free(move |cs| gpioc.pc13.into_push_pull_output(cs));
 
-    let led = RefCell::new(led);
-
     cp.SYST.set_clock_source(SystClkSource::Core);
     cp.SYST.set_reload(8_000_000 / 1000);
     cp.SYST.clear_current();
     cp.SYST.enable_counter();
     cp.SYST.enable_interrupt();
 
-    let mut timer_group = TimerGroup::new(&time_source);
-    let timer = TimerGroup::new_timer();
+    let timer_group = TimerGroup::new(&time_source);
 
-    timer_group.start(&timer, 500, &led, |led| {
-        led.borrow_mut().toggle().ok();
-    });
+    let app = App::new(&timer_group, led);
+    app.start();
 
     loop {
         cortex_m::asm::wfi();
