@@ -1,14 +1,16 @@
 #![no_std]
 #![no_main]
 
+extern crate tiny;
+
 use panic_halt as _;
 
 use cortex_m::{peripheral::syst::SystClkSource, Peripherals};
 use cortex_m_rt::{entry, exception};
 use stm32f0xx_hal::{pac, prelude::*};
 
-use stm32f051_rust::time_source::TimeSource;
-use stm32f051_rust::timer::{Timer, TimerGroup};
+use tiny::time_source::TimeSource;
+use tiny::timer::{Timer, TimerGroup};
 
 use stm32f0xx_hal::gpio::gpioc::PC13;
 use stm32f0xx_hal::gpio::{Output, PushPull};
