@@ -49,12 +49,10 @@ impl<'a> App<'a> {
     }
 
     fn start(&'a self) {
-        self.arm_timer();
-    }
-
-    fn arm_timer(&'a self) {
-        self.led.borrow_mut().toggle().ok();
-        self.timer_group.start(&self.timer, 500, self, |app| app.arm_timer());
+        self.timer_group
+            .start_periodic(&self.timer, 500, self, |app| {
+                app.led.borrow_mut().toggle().ok();
+            });
     }
 }
 
