@@ -50,7 +50,7 @@ impl<'a> App<'a> {
 
     fn start(&'a self) {
         self.timer_group
-            .start_periodic(&self.timer, 500, self, |app| {
+            .start_periodic(&self.timer, 500, self, |app, _| {
                 app.led.borrow_mut().toggle().ok();
             });
     }
